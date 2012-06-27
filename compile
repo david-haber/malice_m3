@@ -1,0 +1,9 @@
+java MAliceCompiler $1
+
+if [ $? -gt "0" ]; then
+	exit 255
+fi
+
+nasm -f elf output.asm
+gcc -m32 -o output output.o
+exit 0

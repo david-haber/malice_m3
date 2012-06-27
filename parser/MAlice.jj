@@ -1,0 +1,727 @@
+/**
+ * JavaCC template file created by SF JavaCC plugin 1.5.17+ wizard for JavaCC 1.5.0+
+ */
+options
+{
+  JDK_VERSION = "1.6";
+  static = true;
+}
+
+PARSER_BEGIN(MAlice)
+package parser;
+import java.util.LinkedList;
+import ast.*;
+import ast.basic.*;
+import ast.expressions.*;
+import ast.functions.*;
+import ast.statements.*;
+
+public class MAlice
+{
+  public static void main(String args []) throws ParseException
+  {
+    MAlice parser = new MAlice(System.in);
+    parser.parseProgram();
+  }
+}
+
+PARSER_END(MAlice)
+
+SKIP :
+{
+  " "
+| "\r"
+| "\t"
+| "\n"
+}
+
+SPECIAL_TOKEN :
+{
+  < COMMENT: < STRING_LITERAL > " thought Alice." >
+}
+
+TOKEN : /** RESERVED WORDS */
+{
+      <COMMA:   		","                 >
+   |  <DOT:     		"."                 >
+   |  <AND:     		"and"               >
+   |  <BUT:     		"but"               >
+   |  <THEN:    		"then"              >
+   |  <WASA: 		    "was a"             >
+   |  <BECAME:  		"became"     	    >
+   |  <T_NUMBER:  		"number"	        >
+   |  <T_LETTER:  		"letter"	        >
+   |  <T_STRING:		"string" 			>
+   |  <SPOKE:   		"spoke"             >
+   |  <WHATWAS:			"what was" 			>
+   |  <HAD :			"had" 			 	>
+   |  <SPIDER:			"spider" 			>
+   |  <QMARK:   		"?" 				>
+   |  <SAID:			"said Alice" 		>
+   |  <ARRINDEX: 		"\'s" 				>
+   |  <PIECE: 			"piece"				>
+   |  <LEFTBRACKET : 	"(" 				>
+   |  <RIGHTBRACKET : 	")" 				>
+   |  <EXCL : 			"!" 				>
+   |  <RETURN : 		"Alice found" 		>
+}
+
+TOKEN: /* FUNCTIONS */
+{
+   <THEROOM:       		"The room"          >
+|  <CONTAINEDA:  		"contained a"         >
+|  <THELOOKINGGLASS:   		"The Looking-Glass" >
+|  <CHANGEDA	:    		"changed a"         >
+|  <WENTTHROUGH:		"went through" 		>
+}
+
+
+TOKEN : /* If/Loop Literals */
+{
+  <EVENTUALLY:	"eventually" >
+| <BECAUSE:		"because" >
+| <ENOUGH:		"enough times" >
+| <EITHER:		"either" >
+| <PERHAPS: 	"perhaps" >
+| <SO:			"so" >
+| <OR:			"or" >
+| <MAYBE:		"maybe" >
+| <UNSURE:		"Alice was unsure" >
+| <WHICH :		"which" >
+}	
+
+TOKEN : /* Unary Operators */
+{
+   <BIT_COMP:   "~"                           >
+|  <DRANK:       "drank"                       >
+|  <ATE:      "ate"                         >
+}
+
+TOKEN : /* Boolean Operands */
+{
+  <BOOL_AND:		"&&" >
+| <BOOL_OR:			"||" >
+}
+
+
+TOKEN : /* Binary Operators */
+{
+   <PLUS:      "+"                           >
+|  <MINUS:     "-"                           >
+|  <MULT:      "*"                           >
+|  <DIV:       "/"                           >
+|  <MOD:       "%"                           >
+|  <BIT_AND:   "&"                           >
+|  <BIT_XOR:   "^"                           >
+|  <BIT_OR:    "|"                           >
+}
+
+
+TOKEN : /* Boolean Equalitys Symbols */
+{
+  <BOOL_GT :	">" >
+| < BOOL_GTE:	">=" >
+| < BOOL_LT:	"<" >
+| < BOOL_LTE:	"<=" >
+| < BOOL_EQ:	"==" >
+| < BOOL_NOTEQ: "!=" >
+} 
+   
+TOKEN : /* LITERALS */
+{
+  	  <INT:        "0"|(["1"-"9"](<DIGIT>)*)          >
+   | < IDENTIFIER: <CHAR>(<CHAR>|<DIGIT>)*  >
+   | < CHAR:		  ["a"-"z","A"-"Z","_"] >
+   |  <DIGIT:      ["0"-"9"]                         		>
+   |  <LITERALCHAR:  "'"["a"-"z","A"-"Z","_"]"'"                      		>
+   |  < STRING_LITERAL:
+      "\""
+      (   (~["\"","\\","\n","\r"])
+        | ("\\"
+            ( ["n","t","b","r","f","\\","'","\""]
+            | ["0"-"7"] ( ["0"-"7"] )?
+            | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+            )
+          )
+      )*
+      "\""
+  	  >
+
+}
+
+ProgramNode parseProgram() :
+{
+  MainNode mainNode;
+  FunctionNode functionBuffer;
+  LinkedList <FunctionNode > functions = new LinkedList <FunctionNode> ();
+}
+{
+	mainNode = parseMain() (functionBuffer = parseFunction()	{	  functions.add(functionBuffer);
+	})*
+	{	  return new ProgramNode (mainNode, functions);
+}
+}
+
+/* 
+ * <Function> -> <ROOM_FUNCTION> | <LOOKING_GLASS>
+ * <ROOM_FUNCTION> -> <F_ROOM> STRING (<ARGUMENT-LIST>) <F_CONTAINED> <RETURN_TYPE> <LOS>  <RETURN>
+ * <LOOKING_GLASS> -> <F_LOOKING> STRING <F_CHANGED> <RETURN_TYPE> <LOS>
+ */
+FunctionNode parseFunction() :
+{
+  FunctionNode function;
+}
+{
+   (     function = parseRoom() | function = parseLookingGlass()
+   )
+   {     return function;
+   }
+}
+
+RoomFunctionNode parseRoom() :
+{
+  Token t;
+   LinkedList <ArgumentDefinitionNode> arguments = new LinkedList <ArgumentDefinitionNode >();
+   Type returnType;
+   StatementListNode functionBody;
+}
+{
+   <THEROOM> t=<IDENTIFIER> arguments=parseArguments() <CONTAINEDA> returnType=parseType() functionBody=parseListOfStatements() [parseReturn()]
+   { // TODO What about the [parseReturn()]?     return new RoomFunctionNode (t.image,arguments, returnType, functionBody);
+   }
+}
+
+FoundNode parseReturn() :
+{
+  ExpressionNode expression;
+}
+{
+  < RETURN > expression = parseExpression()
+  {    return new FoundNode(expression);
+  }
+}
+
+LookingGlassFunctionNode parseLookingGlass() :
+{
+   Token t;
+   Type argType;
+   StatementListNode functionBody;
+}
+{
+   <THELOOKINGGLASS> t=<IDENTIFIER> <CHANGEDA> argType=parseType() functionBody = parseListOfStatements()
+   {     return new LookingGlassFunctionNode(t.image, argType, functionBody);
+   }
+}
+
+/*
+ * <Arguments> 
+ * 
+ */
+LinkedList<ArgumentDefinitionNode > parseArguments() :
+{
+  LinkedList<ArgumentDefinitionNode > arguments = new LinkedList <ArgumentDefinitionNode > ();
+  boolean isSpider = false;
+  Type argType;
+  ArgumentDefinitionNode argBuffer;
+  Token t;
+  
+}
+{
+   <LEFTBRACKET> [[<SPIDER >   {     isSpider = true;
+   }] argType = parseType() t=<IDENTIFIER>   {     arguments.add(new ArgumentDefinitionNode(argType, t.image, isSpider));
+     isSpider = false;
+   } (<COMMA> [<SPIDER >   {     isSpider = true;
+   }] argType = parseType() t=<IDENTIFIER>   {     arguments.add(new ArgumentDefinitionNode(argType, t.image, isSpider));
+     isSpider = false;
+   } )*] <RIGHTBRACKET>
+   {     return arguments;
+   }
+}
+
+Type parseType() :
+{
+}
+{
+   <T_NUMBER>   {     return Type.NUMBER;
+   }
+   | <T_LETTER>   {     return Type.LETTER;
+   }
+   | < T_STRING >   {     return Type.STRING;
+   }
+   {     return null;
+   }
+}
+
+
+MainNode parseMain() :
+{
+  StatementListNode statementsNode;
+}
+{
+  statementsNode = parseListOfStatements()
+  {    return new MainNode(statementsNode);
+  }
+}
+
+StatementListNode parseListOfStatements() :
+{
+  StatementNode statementNode;
+  StatementListNode rest = null;
+}
+{ // empty program??
+  statementNode = parseStatement() parseEnd() [LOOKAHEAD(1) rest = parseListOfStatements()]
+  {    return new StatementListNode (statementNode, rest);
+  }
+}
+
+/*
+ * End - > "," | "and" | "." | "but" | "then" | "?"
+ */
+void parseEnd():
+{
+}
+{ 
+   <COMMA> | <AND> | <DOT> | <BUT> | <THEN>| < QMARK > 
+}	
+
+StatementNode parseStatement() :
+{
+   Token t;
+   StatementNode result;
+   IdentifierNode identifier;
+   BasicIdentifierNode basicIdentifier;
+   LookingGlassCallNode lookingCall;
+   RoomCallNode roomCall;
+   NonCharExpressionNode nonCharExpression;
+}
+{
+
+   	LOOKAHEAD(2)
+		t = < IDENTIFIER >		{		  identifier = new BasicIdentifierNode (t.image);		}
+						( result = parseDeclaration ((BasicIdentifierNode) identifier)						{						  return result;
+						}						|      // following statements are preceded by identifier
+		   				(	[identifier = parseArray((BasicIdentifierNode) identifier)]
+							(
+						  		result = parseAssignment(identifier)						  		{						  		  return result;
+						  		}
+							|  < SPOKE >							{							  return new SaidSpokeNode (identifier);
+							}
+							|  < DRANK >							{							  return new DrankNode (identifier);
+							}
+							|  < ATE >							{							  return new AteNode (identifier);
+							}
+							)
+						)
+						|
+						    // no arrays
+							lookingCall= parseLookingGlassCall(identifier)							{							  return lookingCall;
+							}
+						|
+						 // room function call
+					   		roomCall= parseRoomFunctionCall(t)
+					   		[ < SPOKE >					   		{ 					   		  return new SaidSpokeNode (roomCall);					   		}					   		 ]					   		 {					   		   return roomCall;
+					   		 }
+						 )
+	|  t=< STRING_LITERAL > ( < SPOKE >	{	  return new SaidSpokeNode(new StringLiteralNode (t.image));	}	 | < SAID >	 {	   return new SaidSpokeNode (new StringLiteralNode (t.image));
+	 })
+	|  nonCharExpression = parseNonCharExpression() [< SPOKE >	{	  return new SaidSpokeNode(nonCharExpression);
+	}| < SAID >	{	  return new SaidSpokeNode (nonCharExpression);
+	}]	{	  return nonCharExpression;
+	}  // what about 'a' said Alice (parseExpression())
+ 	|  result = parseEventually() 	{ 	  return result;
+ 	}
+	|  result = parsePerhaps()	{	  return result;
+	}
+	|  result = parseEither()	{	  return result;
+	}
+	|  result = parseReturn()	{	  return result;
+	}
+	| result = parseWhatWas()
+	{	  return result;
+	}
+}
+
+WhatWasNode parseWhatWas() :{
+  IdentifierNode identifier;
+  Token t;}{   < WHATWAS > t = < IDENTIFIER >   {     identifier = new BasicIdentifierNode (t.image);
+   } [identifier = parseArray((BasicIdentifierNode)identifier)]   {     return new WhatWasNode (identifier);
+   }
+ }
+
+DeclareNode parseDeclaration(BasicIdentifierNode identifier) :
+{
+  Type declaredType;
+  NumericalExpressionNode arraySize;
+}
+{
+   <WASA> declaredType = parseType()   {     return new DeclareBasicNode (identifier, declaredType);
+   }
+|  <HAD> arraySize = parseNumericalExpression() declaredType = parseType(){  return new DeclareArrayNode (identifier, arraySize, declaredType);
+}
+}
+
+ArrayElementIdentifierNode parseArray(BasicIdentifierNode arrayName) :
+{
+  NumericalExpressionNode index;
+}
+{
+	< ARRINDEX > index=parseNumericalExpression() < PIECE >	{	  return new ArrayElementIdentifierNode (arrayName, index);
+	}
+}  
+
+AssignNode parseAssignment(IdentifierNode identifier) :
+{
+  ExpressionNode expression;
+}
+{
+   <BECAME> expression=parseExpression()
+   {     return new AssignNode (identifier, expression);
+   }
+}
+
+RoomCallNode parseRoomFunctionCall(Token identifier) :
+{
+   LinkedList<ParameterNode> params = new LinkedList<ParameterNode>();
+   ParameterNode p;
+}
+{
+	< LEFTBRACKET >
+	p = parseParameter()
+	{	   params.add(p);
+	}
+	(
+	   parseEnd() p = parseParameter()	{	   params.add(p);
+	}
+	)*
+	< RIGHTBRACKET >	
+	{	   return new RoomCallNode(identifier.image, params);
+	}
+}
+
+LookingGlassCallNode parseLookingGlassCall (IdentifierNode identifier) :
+{
+  Token t;
+}
+{
+   <WENTTHROUGH> t=<IDENTIFIER>   {     return new LookingGlassCallNode (identifier, t.image);
+   }
+}
+
+// FUNCTION CALLS
+
+ParameterNode parseParameter() :
+{
+   NonCharExpressionNode nonCharExpression;
+   Token t;
+}
+{
+  nonCharExpression = parseNonCharExpression()
+  {     return new ParameterNode(nonCharExpression);
+  }
+| t = < STRING_LITERAL >
+  {  	 return new ParameterNode(new StringLiteralNode (t.image));
+  }
+| t = < LITERALCHAR >
+  {	 return new ParameterNode(new CharacterLiteralNode (t.image));
+  }
+}
+
+// LOOPS
+
+EventuallyNode parseEventually() :
+{
+  NonCharExpressionNode condition;
+  StatementListNode body;
+}
+{
+
+  < EVENTUALLY > <LEFTBRACKET> condition=parseNonCharExpression() <RIGHTBRACKET> <BECAUSE > body=parseListOfStatements() <ENOUGH >
+  {    return new EventuallyNode (condition, body);
+  }
+}
+
+PerhapsNode parsePerhaps() :
+{
+  NonCharExpressionNode condition;
+  StatementListNode ifTrue;
+  StatementListNode ifNot;
+  ElseNode elseIfNode = null;
+  PerhapsNode result;
+}
+{
+  < PERHAPS > <LEFTBRACKET > condition=parseNonCharExpression() < RIGHTBRACKET > < SO > ifTrue=parseListOfStatements()
+  			{
+			  result = new PerhapsNode (condition, ifTrue, null);
+			}
+  [< OR >
+			(			  (elseIfNode = parseMaybe()					{					result = new PerhapsNode (condition, ifTrue, elseIfNode);
+					})
+			| (ifNot = parseListOfStatements()			{			  result = new PerhapsNode (condition, ifTrue, ifNot);
+			}
+			))]			 < UNSURE >[<WHICH >]
+			{			  return result;
+			} 
+}
+
+ElseNode parseMaybe() :
+{
+  ElseNode elseNode = null;
+  StatementListNode list;
+  NonCharExpressionNode elseIfCondition;}{	< MAYBE > < LEFTBRACKET > elseIfCondition = parseNonCharExpression() < RIGHTBRACKET > < SO > list = parseListOfStatements()
+	(	  [<OR >(elseNode = parseMaybe() |elseNode = parseListOfStatements())]
+	)	  {	    return new PerhapsNode (elseIfCondition, list, elseNode);
+	  }
+}
+
+EitherNode parseEither() :
+{
+  NonCharExpressionNode condition;
+  StatementListNode ifTrue;
+  StatementListNode ifFalse;
+}
+{
+  < EITHER > <LEFTBRACKET > condition=parseNonCharExpression() < RIGHTBRACKET >< SO >
+  			 ifTrue=parseListOfStatements() < OR > ifFalse=parseListOfStatements() < UNSURE ><WHICH >
+	{	  return new EitherNode (condition, ifTrue, ifFalse);
+	}
+}
+
+// EXPRESSIONS START HERE
+
+ExpressionNode parseExpression() :
+{
+  Token t;
+  NonCharExpressionNode nonCharExpression;
+}
+{ 
+   t = <LITERALCHAR>   {     return new CharacterLiteralNode (t.image);
+   }
+|  t = < STRING_LITERAL >{  return new StringLiteralNode (t.image);
+}
+|  nonCharExpression = parseNonCharExpression(){  return nonCharExpression;
+}
+}
+
+NonCharExpressionNode parseNonCharExpression() :
+{
+  NonCharExpressionNode left;
+}
+{
+  left = parseNonCharExpression2() left = parseNonCharExpression1a(left)
+  {    return left;
+  }
+| < EXCL > <LEFTBRACKET > left = parseNonCharExpression() < RIGHTBRACKET >{  return new NotBooleanNode (left);
+}
+}
+
+
+NonCharExpressionNode parseNonCharExpression1a(NonCharExpressionNode left) :
+{
+  NonCharExpressionNode right;
+}
+{
+  [<BOOL_OR > right=parseNonCharExpression2() right=parseNonCharExpression1a(new BoolOrExpressionNode (left, right))  {    return right;
+  }]
+  {    return left;
+  }
+}
+
+
+NonCharExpressionNode parseNonCharExpression2() :
+{
+  NonCharExpressionNode left;
+}
+{
+  left = parseNonCharExpression3() left = parseNonCharExpression2a(left)  {    return left;
+  }
+}
+
+NonCharExpressionNode parseNonCharExpression2a(NonCharExpressionNode left) :
+{
+  NonCharExpressionNode right;
+}
+{
+  [<BOOL_AND > right=parseNonCharExpression3() right=parseNonCharExpression2a(new BoolAndExpressionNode (left, right))  {    return right;
+  }]
+  {    return left;
+  }
+}
+
+NonCharExpressionNode parseNonCharExpression3() :
+{
+  NumericalExpressionNode n1;
+  BoolExpressionNode comparisonNode;
+}
+{
+  n1 = parseNumericalExpression() [comparisonNode = parseEqOp(n1)  {    return comparisonNode;
+  }]
+  {    return n1;
+  }
+}
+
+ComparisonNode parseEqOp(NumericalExpressionNode left) :
+{
+  NumericalExpressionNode right;
+}
+{
+  < BOOL_GT > right = parseNumericalExpression()  {    return new ComparisonGTNode(left, right);
+  }
+| < BOOL_GTE > right = parseNumericalExpression(){  return new ComparisonGTENode(left, right);
+}
+| < BOOL_LT > right = parseNumericalExpression(){  return new ComparisonLTNode(left, right);
+}
+| < BOOL_LTE > right = parseNumericalExpression(){  return new ComparisonLTENode(left, right);
+}
+| < BOOL_EQ > right = parseNumericalExpression(){  return new ComparisonEQNode(left, right);
+}
+| < BOOL_NOTEQ > right = parseNumericalExpression(){  return new ComparisonNOTEQNode(left, right);
+}
+}
+
+// NUMERICAL EXPRESSIONS
+
+NumericalExpressionNode parseNumericalExpression() :
+{
+  NumericalExpressionNode n;
+}
+{
+    n=parseNumericalExpression2() n=parseNumericalExpressiona(n)
+    {      return n;
+    }
+}
+
+NumericalExpressionNode parseNumericalExpressiona(NumericalExpressionNode prev) :
+{
+  NumericalExpressionNode n;
+}
+{
+ [LOOKAHEAD(1) < BIT_OR > n= parseNumericalExpression2() n=parseNumericalExpressiona(new BitOrExpressionNode (prev,n)) {   return n;
+ }]
+ {   return prev;
+ }
+}
+
+NumericalExpressionNode parseNumericalExpression2() :
+{
+  NumericalExpressionNode n;
+}
+{
+  n=parseNumericalExpression3() n=parseNumericalExpression2a(n)
+  {    return n;
+  }
+}
+
+NumericalExpressionNode parseNumericalExpression2a(NumericalExpressionNode prev) :
+{
+  NumericalExpressionNode n;
+}
+{
+  [LOOKAHEAD(1) <BIT_XOR > n=parseNumericalExpression3() n=parseNumericalExpression2a(new BitXorExpressionNode(prev,n))
+  {    return n;
+  }]
+  {    return prev;
+  }
+}
+
+NumericalExpressionNode parseNumericalExpression3() :
+{
+  NumericalExpressionNode n;
+}
+{
+  n=parseNumericalExpression4() n=parseNumericalExpression3a(n)  {    return n;
+  }
+}
+
+NumericalExpressionNode parseNumericalExpression3a(NumericalExpressionNode prev) :
+{
+  NumericalExpressionNode n;
+}
+{
+  [LOOKAHEAD(1) <BIT_AND > n=parseNumericalExpression4() n=parseNumericalExpression4a(new BitAndExpressionNode(prev,n))
+  {    return n;
+  }]
+  {    return prev;
+  }
+}
+
+NumericalExpressionNode parseNumericalExpression4() :
+{
+  NumericalExpressionNode n;
+}
+{
+  n=parseNumericalExpression5() n=parseNumericalExpression4a(n)
+  {    return n;
+  }
+}
+
+NumericalExpressionNode parseNumericalExpression4a(NumericalExpressionNode prev) :
+{
+  NumericalExpressionNode n;
+}
+{
+   [LOOKAHEAD(1) ((<PLUS > n=parseNumericalExpression5() n=parseNumericalExpression4a(new PlusExpressionNode(prev,n)))
+| (< MINUS > n=parseNumericalExpression5() n=parseNumericalExpression4a(new MinusExpressionNode(prev,n))))
+{  return n;
+}]
+{  return prev;
+}
+}
+
+NumericalExpressionNode parseNumericalExpression5() :
+{
+  NumericalExpressionNode n;
+}
+{
+  n=parseNumericalExpression6() n=parseNumericalExpression5a(n)
+  {    return n;
+  }
+}
+
+NumericalExpressionNode parseNumericalExpression5a(NumericalExpressionNode prev) :
+{
+  NumericalExpressionNode n;
+}
+{
+  [LOOKAHEAD(1) ((<MULT > n=parseNumericalExpression6() n=parseNumericalExpression5a(new MultExpressionNode(prev,n)))
+|  (< DIV > n=parseNumericalExpression6() n=parseNumericalExpression5a(new DivExpressionNode (prev,n)))
+|  (< MOD > n=parseNumericalExpression6() n=parseNumericalExpression5a(new ModExpressionNode (prev,n))))	
+{  return n;
+}]
+{  return prev;
+}
+}
+
+NumericalExpressionNode parseNumericalExpression6() : 
+{
+  NumericalExpressionNode n;
+}
+{
+  < BIT_COMP > n = parseNumericalExpression()  {    return new BitCompNode (n);
+  }
+| < MINUS > n=parseNumericalExpression(){  return new NegateIntegerNode (n);
+}
+| n = parseNumericalExpression7(){  return n;
+}
+}
+
+NumericalExpressionNode parseNumericalExpression7() :
+{
+  NumericalExpressionNode n;
+  BasicIdentifierNode basic;
+  RoomCallNode room;
+  ArrayElementIdentifierNode arrayIdent;
+  Token t;
+}
+{
+  (< LEFTBRACKET > n= parseNumericalExpression() < RIGHTBRACKET >)  {    return n;  }
+|  t=<IDENTIFIER>{  basic = new BasicIdentifierNode (t.image);
+} [ arrayIdent = parseArray(basic){  return arrayIdent;
+} | room = parseRoomFunctionCall(t){  return room;
+}  ]{  return basic;
+}
+| t=< INT >{  return new IntegerLiteralNode (t.image);
+}
+}
+
+
+
